@@ -1,0 +1,24 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    // Configure glob patterns for excluding files and folders.
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/.vs": true,
+        "**/.tempChromeProfileForDebug": true,
+        "**/node_modules": true,
+        "**/.temp": true
+    },
+    "search.exclude": {
+        "**/.tempChromeProfileForDebug": true,
+        "**/node_modules": true,
+        "**/.temp": true,
+        "**/.dist": true,
+        "**/*.map": true,
+        "**/scripts": true
+    },
+    "editor.tabSize": 4,
+    "typescript.tsdk": "node_modules\\typescript\\lib"
+}

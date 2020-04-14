@@ -1,0 +1,25 @@
+# Build Folders (you can keep bin if you'd like, to store dlls and pdbs)
+# And OS or Editor folders
+[Bb]in/
+*.tmp
+*.log
+*.DS_Store
+._*
+Thumbs.db
+.cache
+.tmproj
+nbproject
+*.sublime-project
+*.sublime-workspace
+.idea
+.directory
+build
+.history
+.tempChromeProfileForDebug
+
+# Node Modules
+node_modules/*
+
+# Local dist
+dist/*
+www/scripts/*

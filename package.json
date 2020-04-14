@@ -1,0 +1,47 @@
+{
+    "name": "babylonjs-ink-sample",
+    "version": "1.0.0",
+    "description": "Quick Demo of using the Babylon.js to simulate inking.",
+    "author": {
+        "name": "Sebastien Vandenberghe"
+    },
+    "contributors": [
+        "Sebastien Vandenberghe"
+    ],
+    "keywords": [
+        "controls",
+        "ink",
+        "video",
+        "acceleration",
+        "3D",
+        "2D",
+        "javascript",
+        "html5",
+        "webgl",
+        "webgl2",
+        "webgpu",
+        "babylon"
+    ],
+    "license": "MIT",
+    "readme": "README.md",
+    "typings": "dist/src/index.d.ts",
+    "main": "dist/src/index.js",
+    "files": [
+        "dist/src/**",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "webpack --env=prod",
+        "start": "npx webpack-dev-server -d --open",
+        "devServer": "npx webpack-dev-server -d"
+    },
+    "devDependencies": {
+        "@babylonjs/core": "^4.2.0-alpha.10",
+        "@babylonjs/inspector": "^4.2.0-alpha.10",
+        "ts-loader": "^6.2.2",
+        "typescript": "^3.8.3",
+        "webpack": "^4.42.1",
+        "webpack-cli": "^3.3.11",
+        "webpack-dev-server": "^3.10.3"
+    }
+}
