@@ -246,7 +246,8 @@ export class InkCanvas {
     private _createScene(canvas: HTMLCanvasElement): Scene {
         // Create our engine to hold on the canvas
         const engine = new Engine(canvas, true, { 
-            preserveDrawingBuffer: false
+            preserveDrawingBuffer: false,
+            alpha: false,
         });
     
         // Create a scene to ink with
