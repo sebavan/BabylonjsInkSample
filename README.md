@@ -1,4 +1,4 @@
-# Babylon.js Video Processing DEMO
+# Babylon.js Ink DEMO
 
 [![Twitter](https://img.shields.io/twitter/follow/babylonjs.svg?style=social&label=Follow)](https://twitter.com/intent/follow?screen_name=babylonjs)
 
