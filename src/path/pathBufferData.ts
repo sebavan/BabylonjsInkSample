@@ -52,7 +52,7 @@ export class PathBufferData {
     private _previous_p4: Vector2 = new Vector2();
     private _previous_p2Index = 0;
     private _previous_p3Index = 0;
-    private _previous_distance = 0;
+    private _previous_length = 0;
 
     private _translation: Vector2 = new Vector2();
     private _thicknessDirection: Vector2 = new Vector2();
@@ -97,8 +97,8 @@ export class PathBufferData {
         this.indicesCount = 0;
     }
 
-    public get totalDistance(): number {
-        return this._previous_distance;
+    public get totalLength(): number {
+        return this._previous_length;
     }
 
     public addPointToPath(x: number, y: number): void {
@@ -268,11 +268,11 @@ export class PathBufferData {
         this._previousPoint.addToRef(this._thicknessDirectionScaled, this._p4);
 
         // Create the quad for the segment.
-        const totalDistance = this._previous_distance + currentSegmentDistance;
-        const p1Index = this._pushVertexData(this._p1.x, this._p1.y, 0, this._previous_distance);
+        const totalDistance = this._previous_length + currentSegmentDistance;
+        const p1Index = this._pushVertexData(this._p1.x, this._p1.y, 0, this._previous_length);
         const p2Index = this._pushVertexData(this._p2.x, this._p2.y, 0, totalDistance);
         const p3Index = this._pushVertexData(this._p3.x, this._p3.y, 0, totalDistance);
-        const p4Index = this._pushVertexData(this._p4.x, this._p4.y, 0, this._previous_distance);
+        const p4Index = this._pushVertexData(this._p4.x, this._p4.y, 0, this._previous_length);
 
         this._pushTriangleData(p1Index, p3Index, p2Index);
         this._pushTriangleData(p3Index, p1Index, p4Index);
@@ -294,7 +294,7 @@ export class PathBufferData {
             const ySlice = this._previousPoint.y + (this._thicknessDirectionScaled.x * Math.sin(alpha) + this._thicknessDirectionScaled.y * Math.cos(alpha));
 
             // Add each point on the contour.
-            const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_distance);
+            const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_length);
 
             this._pushTriangleData(0, contourIndex, contourIndex - 1);
         }
@@ -327,7 +327,7 @@ export class PathBufferData {
         // Reset to first point only as we need to recreate only half a cap
         this._nextTriangleIndex = nextSegmentTriangleIndex;
         this._nextVertexIndex = centerIndex + 1;
-        this._previous_distance = totalDistance;
+        this._previous_length = totalDistance;
 
         this._previous_translation.copyFrom(this._translation);
         this._previous_thicknessDirection.copyFrom(this._thicknessDirection);
@@ -357,11 +357,11 @@ export class PathBufferData {
         this._currentPoint.addToRef(this._thicknessDirectionScaled, this._p3);
         this._previousPoint.addToRef(this._thicknessDirectionScaled, this._p4);
 
-        const totalDistance = this._previous_distance + currentSegmentDistance;
-        const p1Index = this._pushVertexData(this._p1.x, this._p1.y, 0, this._previous_distance);
+        const totalDistance = this._previous_length + currentSegmentDistance;
+        const p1Index = this._pushVertexData(this._p1.x, this._p1.y, 0, this._previous_length);
         const p2Index = this._pushVertexData(this._p2.x, this._p2.y, 0, totalDistance);
         const p3Index = this._pushVertexData(this._p3.x, this._p3.y, 0, totalDistance);
-        const p4Index = this._pushVertexData(this._p4.x, this._p4.y, 0, this._previous_distance);
+        const p4Index = this._pushVertexData(this._p4.x, this._p4.y, 0, this._previous_length);
 
         this._pushTriangleData(p1Index, p3Index, p2Index);
         this._pushTriangleData(p3Index, p1Index, p4Index);
@@ -393,7 +393,7 @@ export class PathBufferData {
                     const ySlice = this._previousPoint.y + (-this._thicknessDirectionScaled.x * Math.sin(alpha + Math.PI) - this._thicknessDirectionScaled.y * Math.cos(alpha + Math.PI));
     
                     // Add each point on the contour.
-                    const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_distance);
+                    const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_length);
                     if (i == 1) {
                         this._pushTriangleData(previousCenterIndex, contourIndex, p4Index);
                     }
@@ -452,7 +452,7 @@ export class PathBufferData {
                 const ySlice = this._previousPoint.y + (-this._thicknessDirectionScaled.x * Math.sin(alpha + Math.PI) - this._thicknessDirectionScaled.y * Math.cos(alpha + Math.PI));
 
                 // Add each point on the contour.
-                const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_distance);
+                const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_length);
 
                 // We are lucky cause if the first angle is enough, contourIndex - 1 is actually equal to p4 :-)
                 // We do not need another if.
@@ -480,7 +480,7 @@ export class PathBufferData {
                 const ySlice = this._previousPoint.y + (-this._previous_thicknessDirectionScaled.x * Math.sin(alpha) - this._previous_thicknessDirectionScaled.y * Math.cos(alpha));
 
                 // Add each point on the contour.
-                const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_distance);
+                const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_length);
                 if (i == 1) {
                     this._pushTriangleData(previousCenterIndex, contourIndex, this._previous_p2Index);
                 }
@@ -521,7 +521,7 @@ export class PathBufferData {
         // Reset to first point only as we need to recreate only half a cap
         this._nextTriangleIndex = nextSegmentTriangleIndex;
         this._nextVertexIndex = centerIndex + 1;
-        this._previous_distance = totalDistance;
+        this._previous_length = totalDistance;
 
         this._previous_translation.copyFrom(this._translation);
         this._previous_thicknessDirection.copyFrom(this._thicknessDirection);

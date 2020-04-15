@@ -238,8 +238,8 @@ export class InkCanvas {
         this._pointerNode.y = this._scene.pointerY;
 
         // Gets the interpolated color for the rainbow particle
-        getColorAtToRef(this._currentPath.totalDistance, this._particleSystem.color2)
-        getColorAtToRef(this._currentPath.totalDistance, this._particleSystem.color1)
+        getColorAtToRef(this._currentPath.totalLength, this._particleSystem.color2)
+        getColorAtToRef(this._currentPath.totalLength, this._particleSystem.color1)
 
     }
 
