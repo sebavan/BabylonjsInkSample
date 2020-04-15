@@ -1,13 +1,33 @@
 // Import our Shader Config
 import { Vector2 } from "@babylonjs/core/Maths/math.vector";
 
+/**
+ * Defines the set of options available to create path buffer data
+ */
 export interface PathBufferDataOptions {
+    /**
+     * Defines what is the min distance between 2 added points
+     * to start smoothing.
+     */
     smoothingDistance: number;
+    /**
+     * Defines the end caps roundness (how many subdivs the points would have).
+     */
     roundness: number;
+    /**
+     * Defines the radius of the path.
+     */
     radius: number;
+    /**
+     * Defines how many added points do we debounce.
+     * (can be a great help while debugging to simulate slowing down pointer events)
+     */
     debounce: number;
 }
 
+/**
+ * The default options setup
+ */
 const DefaultOptions: PathBufferDataOptions = {
     smoothingDistance: 20,
     roundness: 16,
@@ -15,14 +35,35 @@ const DefaultOptions: PathBufferDataOptions = {
     debounce: 1,
 }
 
+/**
+ * This class helps creating a mesh according to a list of points being
+ * added to it.
+ * 
+ * It will expose all the required buffer data to be wrappable in any gl contexts.
+ * 
+ * It will try to limit GC and over allocation.
+ */
 export class PathBufferData {
 
     private static readonly _VerticesStartSize = 10000;
     private static readonly _VerticesExpansionRate = 2;
 
+    /**
+     * The positions vertex buffer raw data as float (vec3)
+     */
     public positions: Float32Array;
+    /**
+     * The distances vertex buffer raw data as float (float)
+     */
     public distances: Float32Array;
+    /**
+     * The indices buffer raw data as UInt32 (TRIANGLE)
+     */
     public indices: Uint32Array;
+    /**
+     * The number of meaningfull data in the indices buffer (to help drawing only
+     * the relevant information as the buffers might be bigger)
+     */
     public indicesCount: number;
 
     private readonly _options: PathBufferDataOptions;
@@ -53,7 +94,6 @@ export class PathBufferData {
     private _previous_p2Index = 0;
     private _previous_p3Index = 0;
     private _previous_length = 0;
-
     private _translation: Vector2 = new Vector2();
     private _thicknessDirection: Vector2 = new Vector2();
     private _thicknessDirectionScaled: Vector2 = new Vector2();
@@ -61,13 +101,18 @@ export class PathBufferData {
     private _p2: Vector2 = new Vector2();
     private _p3: Vector2 = new Vector2();
     private _p4: Vector2 = new Vector2();
-
     private _p1p2: Vector2 = new Vector2();
     private _p1previous_p2: Vector2 = new Vector2();
-
     private _currentDebounce = 0;
+    private _smoothing_previousPoint = new Vector2();
+    private _smoothing_newPoint = new Vector2();
+    private _smoothing_temp = new Vector2();
 
-    public constructor(options: Partial<PathBufferDataOptions> = DefaultOptions) {
+    /**
+     * Creates a new instance of the path buffer data.
+     * @param options defines the various options impacting how we generate the path
+     */
+    constructor(options: Partial<PathBufferDataOptions> = DefaultOptions) {
         this._options = {
             ...DefaultOptions,
             ...options,
@@ -97,32 +142,47 @@ export class PathBufferData {
         this.indicesCount = 0;
     }
 
+    /**
+     * Get the total length of the path (accumulated distance between each points)
+     */
     public get totalLength(): number {
         return this._previous_length;
     }
 
+    /**
+     * Adds a new point to the path.
+     * @param x defines the x coordinates of the path
+     * @param y defines the x coordinates of the path
+     */
     public addPointToPath(x: number, y: number): void {
         const pointsLength = this._points.length;
         if (pointsLength === 0) {
+            // The first point is directly added
             this._addPoint(x, y);
         }
+        // The subsequent ones needs to be different
         else if (this._previousPoint.x !== x || this._previousPoint.y !== y) {
+
+            // Also we debounce our inputs here for debug purpose
             this._currentDebounce++;
             this._currentDebounce = this._currentDebounce % this._debounce;
             if (this._currentDebounce !== 0) {
                 return;
             }
 
+            // We compute the distance from the previous point
             this._currentPoint.set(x, y);
             this._currentPoint.subtractInPlace(this._previousPoint);
             const dist = this._currentPoint.length();
 
-            if (dist > this._radius) {
+            // Only if we are superior to half the radius
+            if (dist > this._radius / 2) {
                 if (pointsLength <= 2) {
+                    // Under 2 points we can not smooth the lines.
                     this._addMidPoint(x, y);
                 }
                 else {
-                    // As soon as we have at least 1 previous point we can start smoothing
+                    // As soon as we have at least 2 previous points we can start smoothing
                     this._addPointsSmoothly(x, y);
                 }
             }
@@ -131,49 +191,55 @@ export class PathBufferData {
         this._points.push(x, y);
     }
 
-    private _smoothing_previousPoint = new Vector2();
-    private _smoothing_newPoint = new Vector2();
-    private _smoothing_temp = new Vector2();
+//_______________ SMOOTHING ______________
 
     private _addMidPoint(x: number, y: number): void {
         const length = this._points.length;
 
+        // Compute the Mid Point between our last inputs and the new one
         const x1 = this._points[length - 2];
         const y1 = this._points[length - 1];
         this._smoothing_previousPoint.set(x1, y1);
         this._smoothing_newPoint.set(x, y);
-
         this._smoothing_newPoint.subtractToRef(this._smoothing_previousPoint, this._smoothing_temp);
         this._smoothing_temp.scaleInPlace(0.5);
 
-        // Temp now holds the mid point
+        // Temp now holds the half vector (previous -> current)
+        // We add back to the previous point
         this._smoothing_temp.addInPlace(this._smoothing_previousPoint);
 
+        // To find our mid point
         const midPointX = this._smoothing_temp.x;
         const midPointY = this._smoothing_temp.y;
 
+        // Which is the one we visually add
         this._addPoint(midPointX, midPointY);
     }
 
     private _addPointsSmoothly(x: number, y: number): void {
         const length = this._points.length;
 
+        // Compute the Mid Point between our last inputs and the new one
         const x1 = this._points[length - 2];
         const y1 = this._points[length - 1];
         this._smoothing_previousPoint.set(x1, y1);
         this._smoothing_newPoint.set(x, y);
-
         this._smoothing_newPoint.subtractToRef(this._smoothing_previousPoint, this._smoothing_temp);
+        // We extract the distance the pointer did since the previous addition
         const distanceFromPreviousPoint = this._smoothing_temp.length();
-
         this._smoothing_temp.scaleInPlace(0.5);
 
-        // Temp now holds the mid point
+        // Temp now holds the half vector (previous -> current)
+        // We add back to the previous point
         this._smoothing_temp.addInPlace(this._smoothing_previousPoint);
-        
+
+        // To find our mid point
         const midPointX = this._smoothing_temp.x;
         const midPointY = this._smoothing_temp.y;
 
+        // We compute how many steps we should introduce depending on our
+        // smoothing distance.
+        // An angle would be more relevant than a distance here but it looks ok so...
         const steps = Math.ceil(distanceFromPreviousPoint / this._smoothingDistance);
         if (steps > 1) {
             const previousX = this._previousPoint.x;
@@ -183,12 +249,18 @@ export class PathBufferData {
                 const smoothX = this._quadraticBezierEquation(howFar, previousX, x1, midPointX);
                 const smoothY = this._quadraticBezierEquation(howFar, previousY, y1, midPointY);
 
+                // We use a quadratic bezier between the previous point and the new coordinates
+                // with a control points being the mid vector
                 this._addPoint(smoothX, smoothY);
             }
         }
 
+        // Finally we record the point
         this._addPoint(midPointX, midPointY);
     }
+
+//_______________ SMOOTHING END _____________
+//_______________   GEOMETRY   ______________
 
     private _addPoint(x: number, y: number): void {
         // Checks and expands buffer accordingly.
@@ -402,32 +474,6 @@ export class PathBufferData {
                     }
                 }
             }
-
-            // if (dot_previous_translation_translation < 0) {
-            //     // Add Mid Cap.
-            //     for (let i: number = 1; i < this._roundness; i++) {
-            //         // Only half of a circle.
-            //         const alpha = i * this._roundnessSliceAlpha;
-            //         if (alpha >= Math.PI) {
-            //             this._pushTriangleData(previousCenterIndex, p1Index, this._nextVertexIndex - 1);
-            //             break;
-            //         }
-    
-            //         // 2D rotation
-            //         const xSlice = this._previousPoint.x + (-this._thicknessDirectionScaled.x * Math.cos(alpha + Math.PI) + this._thicknessDirectionScaled.y * Math.sin(alpha + Math.PI));
-            //         const ySlice = this._previousPoint.y + (-this._thicknessDirectionScaled.x * Math.sin(alpha + Math.PI) - this._thicknessDirectionScaled.y * Math.cos(alpha + Math.PI));
-    
-            //         // Add each point on the contour.
-            //         const contourIndex = this._pushVertexData(xSlice, ySlice, 0, this._previous_distance);
-            //         if (i == 1) {
-            //             this._pushTriangleData(previousCenterIndex, contourIndex, p4Index);
-            //         }
-            //         else {
-            //             this._pushTriangleData(previousCenterIndex, contourIndex, contourIndex - 1);
-            //         }
-            //     }
-            // }
-
             // if we go forward that is the easiest
             else {
                 // Extend or do nothing
