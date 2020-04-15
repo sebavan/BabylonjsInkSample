@@ -9,6 +9,9 @@ import { Scalar } from "@babylonjs/core/Maths/math.scalar";
 
 import { RainbowShaderConfiguration } from "./rainbowShader";
 
+/**
+ * The Rainbow colors
+ */
 const colorLookup = new Uint8Array([
     148, 0,   211, 255,
     75,  0,   130, 255,
@@ -20,40 +23,65 @@ const colorLookup = new Uint8Array([
     255, 0,   0,   255,
 ]);
 
-const colors = colorLookup.length / 4;
+/**
+ * The number of colors in our rainbow
+ */
+const colorsCount = colorLookup.length / 4;
 
+/**
+ * Get the color we find at a certain distance from the begining of the stroke
+ * This interpolates as the GPU would do to ensure a matching color scheme
+ * @param distance defines the distance from the begining of the stroke we want to know the color for
+ * @param result the color we want to update with the result to prevent GC
+ */
 export function getColorAtToRef(distance: number, result: Color4): void {
+    // copied setup from the rainbow shader. (one full color loop on 1000px)
     distance = distance % 1000;
+    // go back between 0 and 1
     distance = distance / 1000;
 
-    distance = distance * (colors - 1);
-
+    // let's compute the colors index in the array (the one right before and right after)
+    distance = distance * (colorsCount - 1);
     const index1 = Math.floor(distance) * 4;
     const index2 = Math.ceil(distance) * 4;
 
+    // Keep only the floating part to lerp between both color
     distance = distance - Math.floor(distance);
 
+    // Lerp Lerp Lerp
     result.r = Scalar.Lerp(colorLookup[index1 + 0], colorLookup[index2 + 0], distance) / 255;
     result.g = Scalar.Lerp(colorLookup[index1 + 1], colorLookup[index2 + 1], distance) / 255;
     result.b = Scalar.Lerp(colorLookup[index1 + 2], colorLookup[index2 + 2], distance) / 255;
 }
 
+/**
+ * Creates a new instance of a rainbow material.
+ * (this material change colors along the distance attribute in a wrapped way)
+ * @param name defines the name of the material
+ * @param scene defines the scene the material belongs to
+ * @returns the created material
+ */
 export function createRainbowMaterial(name: string, scene: Scene): ShaderMaterial {
+    // Create a lookup texture from the rainbow colors
     const lookup = RawTexture.CreateRGBATexture(colorLookup, 8, 1, scene);
     lookup.wrapU = Constants.TEXTURE_WRAP_ADDRESSMODE;
     lookup.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
 
+    // A simple shader material is enought for the rainbow
     const shaderMaterial = new ShaderMaterial(name, scene, RainbowShaderConfiguration, {
         attributes: RainbowShaderConfiguration.attributes,
         uniforms: RainbowShaderConfiguration.uniformNames,
         samplers: RainbowShaderConfiguration.samplerNames
     });
 
-    shaderMaterial.setFloat("offset", 10);
-    shaderMaterial.setTexture("rainbowLookup", lookup);
+    // Sets our required values for the shader
     const screenSize = new Vector2(scene.getEngine().getRenderWidth(), scene.getEngine().getRenderHeight());
     shaderMaterial.setVector2("screenSize", screenSize);
+    shaderMaterial.setFloat("offset", 10);
+    shaderMaterial.setTexture("rainbowLookup", lookup);
 
+    // On every 6 frames... because it looks ok, update our offset to provide
+    // a glittery look
     let debounceShimmerValue = 0;
     scene.onBeforeRenderObservable.add(() => {
         debounceShimmerValue++;

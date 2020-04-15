@@ -1,6 +1,6 @@
 
-// This shader is used to simulate a rainbow effect along a path.
-// Fake particles should simmer over time.
+// This shader is used to simply display a static color at the requested
+// position.
 
 const vertexShader = `
 // Attributes

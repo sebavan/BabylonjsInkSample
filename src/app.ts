@@ -4,8 +4,6 @@ import { KeyboardEventTypes } from "@babylonjs/core/Events/keyboardEvents";
 
 import { InkCanvas } from "./inkCanvas";
 
-const debug = false;
-
 // Find our elements
 const mainCanvas = document.getElementById("renderCanvas") as HTMLCanvasElement;
 const fpsDiv = document.getElementById("fps") as HTMLCanvasElement;
@@ -19,6 +17,13 @@ const blackBtn = document.getElementById("black") as HTMLElement;
 const whiteBtn = document.getElementById("white") as HTMLElement;
 const rainbowBtn = document.getElementById("rainbow") as HTMLElement;
 
+/**
+ * Can be set to enter in debug mode.
+ * Materials will be wireframed and inputs will be debounced
+ */
+const debug = false;
+
+// Create our inking surface
 const inkCanvas = new InkCanvas(mainCanvas, "./assets/particle.png", debug);
 
 // Timer Events
