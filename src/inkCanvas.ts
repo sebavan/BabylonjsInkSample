@@ -249,10 +249,11 @@ export class InkCanvas {
             preserveDrawingBuffer: false,
             alpha: false,
         });
+        engine.preventCacheWipeBetweenFrames = true;
     
         // Create a scene to ink with
         const scene = new Scene(engine);
-
+        
         // no need to clear here as we do not preserve buffers
         scene.autoClearDepthAndStencil = false;
     
