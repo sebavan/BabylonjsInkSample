@@ -26,6 +26,36 @@ export interface PathBufferDataOptions {
 }
 
 /**
+ * Defines the set of data changed while adding data
+ */
+export interface PathBufferDataChanges {
+    /**
+     * Defines the minimum index that changes during the path changes
+     */
+    indexStart: number;
+    /**
+     * Defines the maximum index that changes during the path changes
+     */
+    indexEnd: number;
+    /**
+     * Defines the minimum position that changes during the path changes
+     */
+    vertexPositionStart: number;
+    /**
+     * Defines the maximum position that changes during the path changes
+     */
+    vertexPositionEnd: number;
+    /**
+     * Defines the minimum distance that changes during the path changes
+     */
+    vertexDistanceStart: number;
+    /**
+     * Defines the maximum distance that changes during the path changes
+     */
+    vertexDistanceEnd: number;
+}
+
+/**
  * The default options setup
  */
 const DefaultOptions: PathBufferDataOptions = {
@@ -73,6 +103,7 @@ export class PathBufferData {
     private readonly _debounce: number;
     private readonly _roundnessSliceAlpha: number;
     private readonly _maxAddedVerticesPerPoint: number;
+    private readonly _currentChanges: PathBufferDataChanges;
 
     private _maxVerticesCount: number;
 
@@ -140,6 +171,14 @@ export class PathBufferData {
 
         // No data so far
         this.indicesCount = 0;
+        this._currentChanges = {
+            indexStart: 0,
+            indexEnd: 0,
+            vertexPositionStart: 0,
+            vertexPositionEnd: 0,
+            vertexDistanceStart: 0,
+            vertexDistanceEnd: 0,
+        }
     }
 
     /**
@@ -154,7 +193,15 @@ export class PathBufferData {
      * @param x defines the x coordinates of the path
      * @param y defines the x coordinates of the path
      */
-    public addPointToPath(x: number, y: number): void {
+    public addPointToPath(x: number, y: number): PathBufferDataChanges {
+        // Reset the changes
+        this._currentChanges.indexStart = Number.MAX_VALUE;
+        this._currentChanges.indexEnd = 0;
+        this._currentChanges.vertexPositionStart = Number.MAX_VALUE;
+        this._currentChanges.vertexPositionEnd = 0;
+        this._currentChanges.vertexDistanceStart = Number.MAX_VALUE;
+        this._currentChanges.vertexDistanceEnd = 0;
+
         const pointsLength = this._points.length;
         if (pointsLength === 0) {
             // The first point is directly added
@@ -167,7 +214,7 @@ export class PathBufferData {
             this._currentDebounce++;
             this._currentDebounce = this._currentDebounce % this._debounce;
             if (this._currentDebounce !== 0) {
-                return;
+                return this._currentChanges;
             }
 
             // We compute the distance from the previous point
@@ -189,6 +236,7 @@ export class PathBufferData {
         }
 
         this._points.push(x, y);
+        return this._currentChanges;
     }
 
 //_______________ SMOOTHING ______________
@@ -596,9 +644,13 @@ export class PathBufferData {
         this.positions[vertexIndexInPositionBuffer + 0] = x;
         this.positions[vertexIndexInPositionBuffer + 1] = y;
         this.positions[vertexIndexInPositionBuffer + 2] = z;
+        this._currentChanges.vertexPositionStart = Math.min(this._currentChanges.vertexPositionStart, vertexIndexInPositionBuffer);
+        this._currentChanges.vertexPositionEnd = Math.max(this._currentChanges.vertexPositionEnd, vertexIndexInPositionBuffer);
 
         const vertexIndexInDistanceBuffer = vertexIndex * 1;
         this.distances[vertexIndexInDistanceBuffer + 0] = dist;
+        this._currentChanges.vertexDistanceStart = Math.min(this._currentChanges.vertexDistanceStart, vertexIndexInDistanceBuffer);
+        this._currentChanges.vertexDistanceEnd = Math.max(this._currentChanges.vertexDistanceEnd, vertexIndexInDistanceBuffer);
     }
 
     private _pushTriangleData(indexA: number, indexB: number, indexC: number): void {
@@ -612,6 +664,8 @@ export class PathBufferData {
         this.indices[triangleIndexInIndicesBuffer + 0] = indexA;
         this.indices[triangleIndexInIndicesBuffer + 1] = indexB;
         this.indices[triangleIndexInIndicesBuffer + 2] = indexC;
+        this._currentChanges.indexStart = Math.min(this._currentChanges.indexStart, triangleIndexInIndicesBuffer);
+        this._currentChanges.indexEnd = Math.max(this._currentChanges.indexEnd, triangleIndexInIndicesBuffer);
     }
 
     private _createBuffers(size: number) {

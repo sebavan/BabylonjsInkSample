@@ -2,17 +2,30 @@
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Scene } from "@babylonjs/core/scene";
 import { VertexBuffer } from "@babylonjs/core/Meshes/buffer";
+import { Observer } from "@babylonjs/core/Misc/observable";
+import { DataBuffer } from "@babylonjs/core/Meshes/dataBuffer";
+import { ThinEngine } from "@babylonjs/core/Engines/thinEngine";
 
-import { PathBufferData, PathBufferDataOptions } from "./pathBufferData";
+import "../engineExtensions/engine.bufferSubData";
+
+import { PathBufferData, PathBufferDataOptions, PathBufferDataChanges } from "./pathBufferData";
+
 
 /**
  * A path mesh is representing a line of a certain thickness that can be 
  * constructed gradually.
  */
 export class PathMesh extends Mesh {
+    private readonly _onBeforeRenderObserver: Observer<Scene>;
     private readonly _pathData: PathBufferData;
+    private readonly _currentChanges: PathBufferDataChanges;
+    private readonly _engine: ThinEngine;
 
     private _currentPositionsBufferLength: number;
+
+    private _indicesBuffer: DataBuffer;
+    private _positionsBuffer: DataBuffer;
+    private _distancesBuffer: DataBuffer;
 
     /**
      * Instantiates a new path from its starting location.
@@ -25,10 +38,26 @@ export class PathMesh extends Mesh {
     constructor(name: string, scene: Scene, startPointX: number, startPointY: number, options?: Partial<PathBufferDataOptions>) {
         super(name, scene);
 
+        this._engine = scene.getEngine();
+
+        this._currentChanges = {
+            indexStart: 0,
+            indexEnd: 0,
+            vertexPositionStart: 0,
+            vertexPositionEnd: 0,
+            vertexDistanceStart: 0,
+            vertexDistanceEnd: 0,
+        }
+        this._resetCurrentChanges();
+
         this._pathData = new PathBufferData(options);
         this._pathData.addPointToPath(startPointX, startPointY);
 
         this._createGeometry();
+
+        this._onBeforeRenderObserver = scene.onBeforeRenderObservable.add(() => {
+            this._updateGeometry();
+        });
     }
 
     /**
@@ -45,8 +74,24 @@ export class PathMesh extends Mesh {
      * @param y defines the y coordinates of the point
      */
     public addPointToPath(x: number, y: number): void {
-        this._pathData.addPointToPath(x, y);
-        this._updateGeometry();
+        const changes = this._pathData.addPointToPath(x, y);
+        this._currentChanges.indexStart = Math.min(this._currentChanges.indexStart, changes.indexStart);
+        this._currentChanges.indexEnd = Math.max(this._currentChanges.indexEnd, changes.indexEnd);
+        this._currentChanges.vertexPositionStart = Math.min(this._currentChanges.vertexPositionStart, changes.vertexPositionStart);
+        this._currentChanges.vertexPositionEnd = Math.max(this._currentChanges.vertexPositionEnd, changes.vertexPositionEnd);
+        this._currentChanges.vertexDistanceStart = Math.min(this._currentChanges.vertexDistanceStart, changes.vertexDistanceStart);
+        this._currentChanges.vertexDistanceEnd = Math.max(this._currentChanges.vertexDistanceEnd, changes.vertexDistanceEnd);
+    }
+
+    /**
+     * Release the resources associated with the mesh
+     * @param doNotRecurse defines whether or not to recurse and dispose childrens
+     * @param disposeMaterialAndTextures defines whether or not to dispose associated material and textures
+     */
+    public dispose(doNotRecurse?: boolean, disposeMaterialAndTextures?: boolean) {
+        this._scene.onBeforeRenderObservable.remove(this._onBeforeRenderObserver);
+
+        super.dispose(doNotRecurse, disposeMaterialAndTextures);
     }
 
     private _createGeometry(): void {
@@ -58,8 +103,12 @@ export class PathMesh extends Mesh {
         this.setIndices(indices, null, true);
 
         // Sets the vertices buffers
-        this.setVerticesData(VertexBuffer.PositionKind, positions, true);
+        this.setVerticesData(VertexBuffer.PositionKind, positions, true, 3);
         this.setVerticesData("distance", distances, true, 1);
+
+        this._indicesBuffer = this.geometry.getIndexBuffer();
+        this._positionsBuffer = this.geometry.getVertexBuffer(VertexBuffer.PositionKind).getBuffer();
+        this._distancesBuffer = this.geometry.getVertexBuffer("distance").getBuffer();
 
         // Reset the meaningfull index count
         // The buffer are not resized every frame to save GC
@@ -71,9 +120,6 @@ export class PathMesh extends Mesh {
     }
 
     private _updateGeometry(): void {
-        // TODO. Should only upload the relevant new part to the gpu.
-        // TODO. In this case updateIndices should work as well.
-        // TODO. Should only draw the relevant new part as well.
         // TODO. Should update bounding boxes.
 
         const indices = this._pathData.indices;
@@ -88,18 +134,33 @@ export class PathMesh extends Mesh {
         if (this._currentPositionsBufferLength !== positions.length) {
             // if the buffers have been recreated upload the new buffer to the gpu
             geometry.updateIndices(indices, 0, true);
-            this.setVerticesData(VertexBuffer.PositionKind, positions, true);
+            this.setVerticesData(VertexBuffer.PositionKind, positions, true, 3);
             this.setVerticesData("distance", distances, true, 1);
+
+            this._indicesBuffer = this.geometry.getIndexBuffer();
+            this._positionsBuffer = this.geometry.getVertexBuffer(VertexBuffer.PositionKind).getBuffer();
+            this._distancesBuffer = this.geometry.getVertexBuffer("distance").getBuffer();
         }
         else {
             // if the buffers haven t been recreated update the gpu data only
-            geometry.updateIndices(indices, 0, true);
-            geometry.updateVerticesDataDirectly(VertexBuffer.PositionKind, positions, 0);
-            geometry.updateVerticesDataDirectly("distance", distances, 0);
-        }
+            if (this._currentChanges.indexStart !== Number.MAX_VALUE) {
+                // Add 3 to handle the end data point
+                const length = this._currentChanges.indexEnd - this._currentChanges.indexStart + 3;
+                const offset = this._currentChanges.indexStart;
+                this._engine.indexBufferSubData(this._indicesBuffer, offset * 4, indices, offset, length);
+            }
+            if (this._currentChanges.vertexPositionStart !== Number.MAX_VALUE) {
+                // Add 3 to handle the end data point
+                const positionsLength = this._currentChanges.vertexPositionEnd - this._currentChanges.vertexPositionStart + 3;
+                const positionsOffset = this._currentChanges.vertexPositionStart;
+                this._engine.vertexBufferSubData(this._positionsBuffer, positionsOffset * 4, positions, positionsOffset, positionsLength);
 
-        // update bbox
-        // and do not recreate...
+                // Add 1 to handle the end data point
+                const distancesLength = this._currentChanges.vertexDistanceEnd - this._currentChanges.vertexDistanceStart + 1;
+                const distancesOffset = this._currentChanges.vertexDistanceStart;
+                this._engine.vertexBufferSubData(this._distancesBuffer, distancesOffset * 4, distances, distancesOffset, distancesLength);
+            }
+        }
 
         // Reset the meaningfull index count
         // The buffer are not resized every frame to save GC
@@ -112,5 +173,17 @@ export class PathMesh extends Mesh {
 
         // hold on to the current buffer size
         this._currentPositionsBufferLength = positions.length;
+
+        // Reset the changes
+        this._resetCurrentChanges();
+    }
+
+    private _resetCurrentChanges(): void {
+        this._currentChanges.indexStart = Number.MAX_VALUE;
+        this._currentChanges.indexEnd = 0;
+        this._currentChanges.vertexPositionStart = Number.MAX_VALUE;
+        this._currentChanges.vertexPositionEnd = 0;
+        this._currentChanges.vertexDistanceStart = Number.MAX_VALUE;
+        this._currentChanges.vertexDistanceEnd = 0;
     }
 }
