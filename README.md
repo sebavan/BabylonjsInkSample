@@ -4,8 +4,6 @@
 
 **Any questions?** Here is our official [forum](https://forum.babylonjs.com/).
 
-You can find documentation for the controls [here](https://doc.babylonjs.com/features/controls)
-
 ## Running locally
 
 After cloning the repo, running locally during development is all the simplest:
