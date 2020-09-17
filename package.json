@@ -36,12 +36,12 @@
         "devServer": "npx webpack-dev-server -d"
     },
     "devDependencies": {
-        "@babylonjs/core": "^4.2.0-alpha.10",
-        "@babylonjs/inspector": "^4.2.0-alpha.10",
+        "@babylonjs/core": "^4.2.0-beta.3",
+        "@babylonjs/inspector": "^4.2.0-beta.3",
         "ts-loader": "^6.2.2",
-        "typescript": "^3.8.3",
+        "typescript": "^4.0.2",
         "webpack": "^4.42.1",
         "webpack-cli": "^3.3.11",
-        "webpack-dev-server": "^3.10.3"
+        "webpack-dev-server": "^3.11.0"
     }
 }
