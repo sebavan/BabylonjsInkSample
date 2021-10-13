@@ -1,9 +1,9 @@
 // Import our Shader Config
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Scene } from "@babylonjs/core/scene";
-import { VertexBuffer } from "@babylonjs/core/Meshes/buffer";
+import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
+import { DataBuffer } from "@babylonjs/core/Buffers/dataBuffer";
 import { Observer } from "@babylonjs/core/Misc/observable";
-import { DataBuffer } from "@babylonjs/core/Meshes/dataBuffer";
 import { ThinEngine } from "@babylonjs/core/Engines/thinEngine";
 
 import "../engineExtensions/engine.bufferSubData";

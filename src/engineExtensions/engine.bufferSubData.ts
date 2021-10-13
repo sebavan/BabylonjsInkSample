@@ -1,5 +1,5 @@
 import { ThinEngine } from "@babylonjs/core/Engines/thinEngine";
-import { DataBuffer } from "@babylonjs/core/Meshes/dataBuffer";
+import { DataBuffer } from "@babylonjs/core/Buffers/dataBuffer";
 
 declare module "@babylonjs/core/Engines/thinEngine" {
     export interface ThinEngine {
