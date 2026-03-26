@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { DataBuffer } from "@babylonjs/core/Buffers/dataBuffer";
 import { Observer } from "@babylonjs/core/Misc/observable";
-import { ThinEngine } from "@babylonjs/core/Engines/thinEngine";
+import type { ThinEngine } from "@babylonjs/core/Engines/thinEngine";
 
 import "../engineExtensions/engine.bufferSubData";
 
@@ -38,7 +38,7 @@ export class PathMesh extends Mesh {
     constructor(name: string, scene: Scene, startPointX: number, startPointY: number, options?: Partial<PathBufferDataOptions>) {
         super(name, scene);
 
-        this._engine = scene.getEngine();
+        this._engine = scene.getEngine() as unknown as ThinEngine;
 
         this._currentChanges = {
             indexStart: 0,

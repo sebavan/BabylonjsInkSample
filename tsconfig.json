@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "module": "esNext",
-        "target": "es5",
+        "target": "es6",
         "moduleResolution": "node",
         "sourceMap": true,
         "types" : [],
